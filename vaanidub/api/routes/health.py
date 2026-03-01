@@ -29,9 +29,10 @@ async def health_check(config: AppConfig = Depends(get_config)):
     # Check DB
     db_ok = False
     try:
+        from sqlalchemy import text
         from vaanidub.db.session import get_session
         session = get_session()
-        session.execute("SELECT 1")
+        session.execute(text("SELECT 1"))
         session.close()
         db_ok = True
     except Exception:

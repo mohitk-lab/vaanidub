@@ -75,8 +75,11 @@ async def create_job(
         from vaanidub.worker.tasks import process_dubbing_job
         process_dubbing_job.delay(job_id)
     except Exception:
-        # Worker may not be running — job stays pending
-        pass
+        # Celery/Redis not available — fall back to demo pipeline in background thread
+        import threading
+        from vaanidub.demo_pipeline import run_demo_pipeline
+        thread = threading.Thread(target=run_demo_pipeline, args=(job_id,), daemon=True)
+        thread.start()
 
     return JobResponse(
         job_id=job_id,
