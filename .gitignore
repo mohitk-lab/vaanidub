@@ -39,3 +39,4 @@ Thumbs.db
 frontend/node_modules/
 frontend/.next/
 frontend/out/
+.github/workflows/ci.yml
