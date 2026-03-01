@@ -1,0 +1,61 @@
+# VaaniDub Model Registry
+
+models:
+  faster_whisper_large_v2:
+    type: stt
+    source: huggingface
+    model_id: Systran/faster-whisper-large-v2
+    gpu_vram_mb: 4000
+    cpu_ram_mb: 8000
+    download_size_gb: 3.0
+    description: "Faster Whisper large-v2 for speech recognition"
+
+  pyannote_diarization:
+    type: diarization
+    source: huggingface
+    model_id: pyannote/speaker-diarization-3.1
+    gpu_vram_mb: 1500
+    cpu_ram_mb: 3000
+    download_size_gb: 0.5
+    gated: true
+    description: "pyannote speaker diarization 3.1"
+
+  demucs_htdemucs_ft:
+    type: separation
+    source: torch_hub
+    model_id: htdemucs_ft
+    gpu_vram_mb: 2000
+    cpu_ram_mb: 4000
+    download_size_gb: 0.3
+    description: "Demucs vocal separation (fine-tuned)"
+
+  indictrans2_en_indic_200m:
+    type: translation
+    source: huggingface
+    model_id: ai4bharat/indictrans2-en-indic-dist-200M
+    gpu_vram_mb: 1500
+    cpu_ram_mb: 2000
+    download_size_gb: 0.8
+    description: "IndicTrans2 English to Indian languages (200M distilled)"
+
+  indicf5:
+    type: tts
+    source: huggingface
+    model_id: ai4bharat/IndicF5
+    gpu_vram_mb: 4000
+    cpu_ram_mb: 8000
+    download_size_gb: 2.5
+    gated: true
+    languages:
+      - hi  # Hindi
+      - ta  # Tamil
+      - te  # Telugu
+      - bn  # Bengali
+      - mr  # Marathi
+      - kn  # Kannada
+      - ml  # Malayalam
+      - gu  # Gujarati
+      - as  # Assamese
+      - or  # Odia
+      - pa  # Punjabi
+    description: "IndicF5 zero-shot voice cloning TTS for 11 Indian languages"

@@ -1,0 +1,96 @@
+version: "3.8"
+
+services:
+  # ── Redis ──
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── PostgreSQL ──
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: vaanidub
+      POSTGRES_USER: vaanidub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vaanidub_dev}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vaanidub"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── API Server ──
+  api:
+    build: .
+    command: uvicorn vaanidub.api.app:create_app --factory --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://vaanidub:${POSTGRES_PASSWORD:-vaanidub_dev}@postgres:5432/vaanidub
+      - REDIS_URL=redis://redis:6379/0
+      - HF_TOKEN=${HF_TOKEN}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+      - GOOGLE_TRANSLATE_API_KEY=${GOOGLE_TRANSLATE_API_KEY:-}
+    volumes:
+      - model_cache:/root/.cache/vaanidub
+      - job_data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  # ── Celery Worker (GPU) ──
+  worker:
+    build: .
+    command: celery -A vaanidub.worker.celery_app:celery worker --loglevel=info --concurrency=1
+    environment:
+      - DATABASE_URL=postgresql://vaanidub:${POSTGRES_PASSWORD:-vaanidub_dev}@postgres:5432/vaanidub
+      - REDIS_URL=redis://redis:6379/0
+      - HF_TOKEN=${HF_TOKEN}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+      - GOOGLE_TRANSLATE_API_KEY=${GOOGLE_TRANSLATE_API_KEY:-}
+    volumes:
+      - model_cache:/root/.cache/vaanidub
+      - job_data:/app/data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  # ── Frontend ──
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - api
+
+volumes:
+  redis_data:
+  postgres_data:
+  model_cache:
+  job_data:

@@ -1,0 +1,77 @@
+# VaaniDub Default Configuration
+
+app:
+  name: vaanidub
+  version: "0.1.0"
+  debug: false
+  log_level: INFO
+  max_concurrent_jobs: 2
+  max_upload_size_mb: 2048
+  max_audio_duration_sec: 7200
+
+storage:
+  base_path: ./data/jobs
+  temp_path: ./data/tmp
+  cleanup_after_days: 30
+
+database:
+  url: sqlite:///./data/vaanidub.db
+
+redis:
+  url: redis://localhost:6379/0
+
+api:
+  host: 0.0.0.0
+  port: 8000
+  cors_origins:
+    - http://localhost:3000
+
+providers:
+  stt:
+    model_size: large-v2
+    device: cuda
+    compute_type: float16
+    beam_size: 5
+    vad_filter: true
+
+  diarization:
+    pipeline: pyannote/speaker-diarization-3.1
+    device: cuda
+    min_speakers: 1
+    max_speakers: 10
+
+  separation:
+    model: htdemucs_ft
+    device: cuda
+    two_stems: vocals
+
+  translation:
+    model_name: ai4bharat/indictrans2-en-indic-dist-200M
+    device: cuda
+    batch_size: 32
+    max_length: 256
+
+  tts:
+    primary: indicf5
+    fallback: elevenlabs
+    indicf5:
+      model_name: ai4bharat/IndicF5
+      device: cuda
+      reference_clip_min_sec: 5.0
+      reference_clip_max_sec: 15.0
+    elevenlabs:
+      model: eleven_multilingual_v2
+      stability: 0.5
+      similarity_boost: 0.75
+
+quality:
+  min_acceptable_score: 60.0
+  voice_similarity_threshold: 0.55
+  timing_tolerance_percent: 20.0
+  auto_escalate_to_paid: false
+  run_quality_check: true
+
+gpu:
+  device: "cuda:0"
+  max_vram_usage_percent: 90
+  model_offload_to_cpu: true

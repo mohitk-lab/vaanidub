@@ -1,0 +1,7 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // "standalone" is for Docker; Vercel uses its own build system
+  output: process.env.DOCKER_BUILD ? "standalone" : undefined,
+};
+
+module.exports = nextConfig;
