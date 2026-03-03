@@ -35,11 +35,21 @@ export interface Language {
   tts_providers: string[];
 }
 
+// Vercel serverless body limit is 4.5MB
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB safe margin
+
 export async function createJob(
   file: File,
   targetLanguages: string[],
   sourceLanguage?: string
 ): Promise<Job> {
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error(
+      `File too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). ` +
+      `Max allowed: 4MB. Try a shorter or lower-quality clip.`
+    );
+  }
+
   const formData = new FormData();
   formData.append("file", file);
   formData.append("target_languages", JSON.stringify(targetLanguages));
@@ -53,8 +63,24 @@ export async function createJob(
   });
 
   if (!resp.ok) {
-    const err = await resp.json();
-    throw new Error(err.detail || "Failed to create job");
+    let message = "Failed to create job";
+    try {
+      const text = await resp.text();
+      try {
+        const err = JSON.parse(text);
+        message = err.detail || message;
+      } catch {
+        // Plain text error (e.g. Vercel "Request Entity Too Large")
+        if (text.includes("Request Entity Too Large") || resp.status === 413) {
+          message = "File too large for serverless. Try a smaller file (under 4MB).";
+        } else {
+          message = text || `Server error (${resp.status})`;
+        }
+      }
+    } catch {
+      message = `Server error (${resp.status})`;
+    }
+    throw new Error(message);
   }
 
   const job: Job = await resp.json();

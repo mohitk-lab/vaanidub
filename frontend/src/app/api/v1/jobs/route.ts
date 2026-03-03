@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jobStore, runDemoPipeline, type JobRecord } from "@/lib/store";
 
 export const runtime = "nodejs";
+export const maxDuration = 30; // seconds — allow time for WAV processing
 
 /** POST /api/v1/jobs — Create a new dubbing job */
 export async function POST(req: NextRequest) {
