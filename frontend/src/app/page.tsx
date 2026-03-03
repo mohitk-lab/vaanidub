@@ -140,7 +140,7 @@ export default function HomePage() {
           disabled={loading || !file || selectedLangs.length === 0}
           className="w-full py-3 px-6 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
         >
-          {loading ? "Creating job..." : "Start Dubbing"}
+          {loading ? "Processing... please wait" : "Start Dubbing"}
         </button>
       </section>
     </div>

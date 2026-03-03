@@ -78,26 +78,27 @@ export async function POST(req: NextRequest) {
 
   jobStore.set(jobId, job);
 
-  // Start pipeline asynchronously (runs in background)
+  // Run pipeline synchronously (serverless can't do background work)
   runDemoPipeline(jobId);
 
+  // Return the completed job
   return NextResponse.json(
     {
-      job_id: jobId,
-      status: "pending",
-      current_stage: null,
-      progress: 0,
-      source_language: sourceLang,
-      source_language_confidence: null,
-      target_languages: targets,
-      speakers_detected: null,
-      segments_count: null,
-      duration_seconds: null,
-      error_message: null,
-      output_paths: null,
-      stage_timings: null,
+      job_id: job.job_id,
+      status: job.status,
+      current_stage: job.current_stage,
+      progress: job.progress,
+      source_language: job.source_language,
+      source_language_confidence: job.source_language_confidence,
+      target_languages: job.target_languages,
+      speakers_detected: job.speakers_detected,
+      segments_count: job.segments_count,
+      duration_seconds: job.duration_seconds,
+      error_message: job.error_message,
+      output_paths: job.output_paths,
+      stages: job.stages,
       created_at: job.created_at,
-      completed_at: null,
+      completed_at: job.completed_at,
     },
     { status: 201 }
   );

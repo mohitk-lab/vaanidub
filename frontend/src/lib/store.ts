@@ -206,18 +206,17 @@ function generateDemoWav(durationSec: number, sampleRate: number, pitchFactor: n
   return createWavBuffer(samples, sampleRate);
 }
 
-// ── Demo pipeline (runs async, updates job store in stages) ──
+// ── Demo pipeline (runs synchronously before response is sent) ──
 
-export async function runDemoPipeline(jobId: string): Promise<void> {
+export function runDemoPipeline(jobId: string): void {
   const job = jobStore.get(jobId);
   if (!job) return;
 
   job.status = "processing";
 
   const SAMPLE_RATE = 16000;
-  const durationSec = 10; // default demo duration
+  const durationSec = 10;
 
-  // Determine actual duration from uploaded WAV if available
   let actualDuration = durationSec;
   let inputSamples: Float32Array | null = null;
   let inputSampleRate = SAMPLE_RATE;
@@ -244,9 +243,6 @@ export async function runDemoPipeline(jobId: string): Promise<void> {
         duration_sec: [1, 1, 0.5, 0.5, 0.3, 0.5, 1, 1][i],
         provider_used: "demo",
       });
-
-      // Small delay to simulate processing (visible during polling)
-      await new Promise((r) => setTimeout(r, 400));
     }
 
     // Build per-language output WAVs
@@ -258,7 +254,6 @@ export async function runDemoPipeline(jobId: string): Promise<void> {
 
       let wavBuf: Buffer;
       if (inputSamples) {
-        // Pitch-shift the actual uploaded audio
         const shifted = pitchShift(inputSamples, factor);
         wavBuf = createWavBuffer(shifted, inputSampleRate);
       } else {

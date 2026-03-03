@@ -55,13 +55,41 @@ export async function createJob(
     throw new Error(err.detail || "Failed to create job");
   }
 
-  return resp.json();
+  const job: Job = await resp.json();
+
+  // Cache job in sessionStorage so detail page works across serverless instances
+  try {
+    sessionStorage.setItem(`vaanidub_job_${job.job_id}`, JSON.stringify(job));
+  } catch {
+    // Ignore storage errors
+  }
+
+  return job;
 }
 
 export async function getJob(jobId: string): Promise<Job> {
-  const resp = await fetch(`${API_BASE}/api/v1/jobs/${jobId}`);
-  if (!resp.ok) throw new Error("Job not found");
-  return resp.json();
+  // Try server first
+  try {
+    const resp = await fetch(`${API_BASE}/api/v1/jobs/${jobId}`);
+    if (resp.ok) {
+      const job: Job = await resp.json();
+      // Update cache
+      try {
+        sessionStorage.setItem(`vaanidub_job_${jobId}`, JSON.stringify(job));
+      } catch { /* ignore */ }
+      return job;
+    }
+  } catch {
+    // Server unavailable, fall through to cache
+  }
+
+  // Fall back to sessionStorage cache
+  try {
+    const cached = sessionStorage.getItem(`vaanidub_job_${jobId}`);
+    if (cached) return JSON.parse(cached);
+  } catch { /* ignore */ }
+
+  throw new Error("Job not found");
 }
 
 export async function listJobs(page = 1): Promise<{ jobs: Job[]; total: number }> {
