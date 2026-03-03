@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { createJob, type Language } from "@/lib/api";
+import { prepareFileForUpload } from "@/lib/audio-trimmer";
 import { useRouter } from "next/navigation";
 
 const LANGUAGES: Language[] = [
@@ -19,17 +20,26 @@ const LANGUAGES: Language[] = [
   { code: "pa", name: "Punjabi", native_name: "ਪੰਜਾਬੀ", script: "Gurmukhi", tts_providers: [] },
 ];
 
+const MAX_FILE_SIZE = 1024 * 1024 * 1024; // 1GB
+
 export default function HomePage() {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [selectedLangs, setSelectedLangs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
-      setFile(acceptedFiles[0]);
+      const f = acceptedFiles[0];
+      if (f.size > MAX_FILE_SIZE) {
+        setError("File exceeds 1GB limit.");
+        return;
+      }
+      setFile(f);
       setError(null);
+      setStatusMsg(null);
     }
   }, []);
 
@@ -56,12 +66,27 @@ export default function HomePage() {
 
     setLoading(true);
     setError(null);
+    setStatusMsg(null);
 
     try {
-      const job = await createJob(file, selectedLangs);
+      // Trim large files client-side before upload
+      const prepared = await prepareFileForUpload(file, (msg) =>
+        setStatusMsg(msg)
+      );
+
+      if (prepared !== file) {
+        setStatusMsg(
+          `Trimmed: ${(file.size / (1024 * 1024)).toFixed(1)}MB → ${(prepared.size / (1024 * 1024)).toFixed(1)}MB`
+        );
+      } else {
+        setStatusMsg("Uploading...");
+      }
+
+      const job = await createJob(prepared, selectedLangs);
       router.push(`/jobs/${job.job_id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create job");
+      setStatusMsg(null);
     } finally {
       setLoading(false);
     }
@@ -87,7 +112,14 @@ export default function HomePage() {
             <div>
               <p className="text-green-700 font-medium">{file.name}</p>
               <p className="text-sm text-gray-500 mt-1">
-                {(file.size / (1024 * 1024)).toFixed(1)} MB
+                {file.size >= 1024 * 1024
+                  ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+                  : `${(file.size / 1024).toFixed(0)} KB`}
+                {file.size > 3.5 * 1024 * 1024 && (
+                  <span className="text-amber-600 ml-2">
+                    (will be trimmed to first 60s for demo)
+                  </span>
+                )}
               </p>
               <p className="text-xs text-gray-400 mt-2">Click or drag to replace</p>
             </div>
@@ -95,7 +127,7 @@ export default function HomePage() {
             <div>
               <p className="text-gray-600">Drag & drop your audio/video file here</p>
               <p className="text-sm text-gray-400 mt-1">
-                MP3, WAV, FLAC, MP4, MKV, AVI, WebM
+                MP3, WAV, FLAC, MP4, MKV — up to 1GB
               </p>
             </div>
           )}
@@ -134,6 +166,9 @@ export default function HomePage() {
       <section>
         {error && (
           <p className="text-red-600 text-sm mb-3">{error}</p>
+        )}
+        {statusMsg && loading && (
+          <p className="text-blue-600 text-sm mb-3 animate-pulse">{statusMsg}</p>
         )}
         <button
           onClick={handleSubmit}

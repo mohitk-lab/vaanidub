@@ -35,21 +35,11 @@ export interface Language {
   tts_providers: string[];
 }
 
-// Vercel serverless body limit is 4.5MB
-const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB safe margin
-
 export async function createJob(
   file: File,
   targetLanguages: string[],
   sourceLanguage?: string
 ): Promise<Job> {
-  if (file.size > MAX_FILE_SIZE) {
-    throw new Error(
-      `File too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). ` +
-      `Max allowed: 4MB. Try a shorter or lower-quality clip.`
-    );
-  }
-
   const formData = new FormData();
   formData.append("file", file);
   formData.append("target_languages", JSON.stringify(targetLanguages));
