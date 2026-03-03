@@ -179,7 +179,7 @@ export default function JobPage() {
               <a
                 key={lang}
                 href={getDownloadUrl(job.job_id, lang)}
-                download
+                download={`dubbed_${lang}.wav`}
                 className="block p-3 bg-white rounded-lg border border-green-300 hover:bg-green-100 transition-colors text-center"
               >
                 <p className="font-medium text-green-800">{lang.toUpperCase()}</p>

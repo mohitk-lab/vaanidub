@@ -28,6 +28,7 @@ export async function GET(
     duration_seconds: job.duration_seconds,
     error_message: job.error_message,
     output_paths: job.output_paths,
+    output_buffers: job.output_buffers,
     created_at: job.created_at,
     completed_at: job.completed_at,
     stages: job.stages,

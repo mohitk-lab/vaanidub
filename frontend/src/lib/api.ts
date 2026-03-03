@@ -17,6 +17,8 @@ export interface Job {
   created_at: string | null;
   completed_at: string | null;
   stages?: StageStatus[];
+  /** Base64-encoded WAV outputs keyed by language code */
+  output_buffers?: Record<string, string>;
 }
 
 export interface StageStatus {
@@ -73,8 +75,15 @@ export async function getJob(jobId: string): Promise<Job> {
     const resp = await fetch(`${API_BASE}/api/v1/jobs/${jobId}`);
     if (resp.ok) {
       const job: Job = await resp.json();
-      // Update cache
+      // Merge with cached output_buffers (server may not have them on a different instance)
       try {
+        const cached = sessionStorage.getItem(`vaanidub_job_${jobId}`);
+        if (cached) {
+          const cachedJob: Job = JSON.parse(cached);
+          if (cachedJob.output_buffers && !job.output_buffers) {
+            job.output_buffers = cachedJob.output_buffers;
+          }
+        }
         sessionStorage.setItem(`vaanidub_job_${jobId}`, JSON.stringify(job));
       } catch { /* ignore */ }
       return job;
@@ -105,6 +114,29 @@ export async function getLanguages(): Promise<Language[]> {
   return data.languages;
 }
 
+/**
+ * Get download URL for a dubbed output.
+ * Prefers client-side Blob URL from cached data, falls back to server URL.
+ */
 export function getDownloadUrl(jobId: string, langCode: string): string {
+  // Try to create a Blob URL from cached output_buffers
+  try {
+    const cached = sessionStorage.getItem(`vaanidub_job_${jobId}`);
+    if (cached) {
+      const job: Job = JSON.parse(cached);
+      const base64 = job.output_buffers?.[langCode];
+      if (base64) {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: "audio/wav" });
+        return URL.createObjectURL(blob);
+      }
+    }
+  } catch { /* ignore */ }
+
+  // Fall back to server URL
   return `${API_BASE}/api/v1/jobs/${jobId}/output/${langCode}`;
 }
